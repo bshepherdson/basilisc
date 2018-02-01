@@ -30,6 +30,21 @@ retX
 
 
 
+:print_raw_str ; (buf, len) ->
+pushXY
+set x, a
+set y, b
+
+:print_raw_str_loop
+set a, [x]
+jsr print_char
+add x, 1
+sub y, 1
+ifg y, 0
+  set pc, print_raw_str_loop
+retXY
+
+
 :print_newline
 set a, 0x11
 tc print_char

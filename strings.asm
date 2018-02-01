@@ -31,3 +31,26 @@ set a, z
 retXYZ
 
 
+; NB: Uses the input buffer!
+:lisp_to_str ; (str) -> buf, len
+pushX
+set b, [cursor]
+set x, b ; Save the initial position.
+
+:lisp_to_str_loop
+ife a, empty_list
+  set pc, lisp_to_str_done
+
+set c, [a] ; Read the car, the character cell.
+set [b], [c+1] ; Its cdr is the literal character.
+set a, [a+1]
+add b, 1
+set pc, lisp_to_str_loop
+
+:lisp_to_str_done
+set a, [cursor]
+set [cursor], b
+sub b, x
+retX
+
+
