@@ -15,6 +15,10 @@ ife [a], type_string
   set pc, pr_str_string
 ife [a], type_number
   set pc, pr_str_number
+ife [a], type_assoc
+  set pc, pr_str_assoc
+ife [a], type_native
+  set pc, pr_str_native
 
 ; Default case: a list of other values.
 pushX
@@ -166,3 +170,66 @@ set [a+1], 0x29 ; )
 add [cursor], 2
 set b, 2
 ret
+
+:pr_str_assoc ; Prints an association list.
+set push, [cursor] ; Save the current position for the end.
+set push, [a+1] ; A list of pairs, saved for later.
+
+set b, [cursor]
+set [b], 0x7b ; '{'
+add [cursor], 1
+
+:pr_str_assoc_loop
+; First, print the key.
+set a, peek
+set a, [a] ; A is the cell.
+set a, [a] ; A is the key, a symbol.
+jsr pr_str_inner
+
+set a, [cursor]
+set [a], 0x3a ; ':'
+set [a+1], 0x20 ; space
+add [cursor], 2
+
+set a, peek
+set a, [a] ; A is the cell again.
+set a, [a+1] ; A is the value, so print it.
+jsr pr_str_inner
+
+; Advance the list pointer to the next cell.
+set a, pop
+set a, [a+1] ; Grab the next list cell.
+ife a, empty_list
+  set pc, pr_str_assoc_done
+
+set push, a ; Save the list item for the next iteration.
+
+; Still going, so print the comma space.
+set a, [cursor]
+set [a], 0x2c ; ','
+set [a+1], 0x20 ; space
+add [cursor], 2
+set pc, pr_str_assoc_loop
+
+
+:pr_str_assoc_done
+; Print the final }
+set a, [cursor]
+set [a], 0x7d ; '}'
+add [cursor], 1
+
+set a, pop ; Grab the saved start position.
+set b, [cursor] ; And the current.
+sub b, a ; Length acquired.
+ret
+
+
+:pr_str_native
+set a, [cursor]
+set [a], 0x24 ; '$'
+set [a+1], 0x66 ; 'f'
+set [a+2], 0x6e ; 'n'
+add [cursor], 3
+set b, 3
+ret
+

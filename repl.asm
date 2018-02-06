@@ -4,10 +4,10 @@
 jsr read_string
 set pc, pop
 
-:EVAL ; (AST) -> AST
-set pc, pop
+; EVAL lives in eval.asm
 
 :PRINT ; (AST) -> buf, len
+set [cursor], reader_buffer
 jsr pr_str
 set a, reader_buffer
 set b, [cursor]
@@ -17,6 +17,7 @@ ret
 
 :rep ; (buf, len) -> string
 jsr READ
+set b, [repl_env]
 jsr EVAL
 jsr PRINT
 set pc, pop

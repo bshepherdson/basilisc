@@ -1,7 +1,3 @@
-;; Testing a symbol
-asdf123
-;=>asdf123
-
 ;; Testing a string
 "foo bar \"baz\""
 ;=>"foo bar \"baz\""
@@ -38,13 +34,3 @@ asdf123
 ;; Testing empty list
 ()
 ;=>()
-
-;; Testing simple lists
-(+ 1 2)
-;=>(+ 1 2)
-
-;; Testing nested lists
-(+ 1 (* 3 4))
-;=>(+ 1 (* 3 4))
-
-

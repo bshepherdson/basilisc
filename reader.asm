@@ -110,10 +110,11 @@ ifl c, 0x3a ; <= 9
     set pc, read_atom_number
 
 ife c, 0x2d ; - (negative sign)
-  set pc, read_atom_number
+  set pc, read_atom_negative
 
 ; Read a symbol. That's simply converting to a Lisp string, then tucking it into
 ; a symbol type cell.
+:read_atom_symbol
 jsr str_to_lisp ; A is the Lisp string.
 set push, a
 jsr alloc_cell
@@ -132,6 +133,16 @@ jsr alloc_cell
 set [a], type_string
 set [a+1], pop
 ret
+
+
+; Found a negative sign. If the next character is a digit, process it as a
+; number. If it's not a digit, treat this as a symbol.
+:read_atom_negative
+ifl [a+1], 0x3a ; <= 9
+  ifg [a+1], 0x2f ; >= 0
+    set pc, read_atom_number
+set pc, read_atom_symbol ; Not a number, so back to treating it as a symbol.
+
 
 
 ; Convert the number to a decimal value.

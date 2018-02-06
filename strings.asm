@@ -31,6 +31,15 @@ set a, z
 retXYZ
 
 
+:str_to_symbol ; (buf, len) -> lisp_symbol
+jsr str_to_lisp
+set push, a
+jsr alloc_cell
+set [a], type_symbol
+set [a+1], pop
+ret
+
+
 ; NB: Uses the input buffer!
 :lisp_to_str ; (str) -> buf, len
 pushX

@@ -4,7 +4,7 @@ TESTER=./test_runner.py
 TEST_HARDWARE=serial,clock
 RUN_CMD=dcpu -hw $(TEST_HARDWARE) lisp.bin
 
-TESTS=tests/values.bsl
+TESTS=tests/values.bsl tests/builtins.bsl
 
 
 lisp.bin: *.asm
