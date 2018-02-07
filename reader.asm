@@ -115,12 +115,26 @@ ife c, 0x2d ; - (negative sign)
 ; Read a symbol. That's simply converting to a Lisp string, then tucking it into
 ; a symbol type cell.
 :read_atom_symbol
+set push, a
+set push, b
+jsr check_special_strings
+ifn a, 0
+  set pc, read_atom_symbol_special
+
+set b, pop
+set a, pop
 jsr str_to_lisp ; A is the Lisp string.
 set push, a
 jsr alloc_cell
 set [a], type_symbol
 set [a+1], pop
 ret
+
+
+:read_atom_symbol_special
+add sp, 2 ; Drop the saved raw string.
+ret
+
 
 
 ; Similarly to a symbol, we read the string without its quotes.
@@ -364,4 +378,49 @@ set [c], a
 set [c+1], b
 add [token_count], 1
 ret
+
+
+
+
+; Checks a handful of special strings.
+:check_special_strings ; (buf, len)
+set c, a ; Preparing for swift returns.
+set a, 0
+ifg b, 5
+  ret
+ifl b, 3
+  ret
+
+; It's plausible, so check each one.
+
+
+ife b, 3
+  set pc, check_special_strings_nil
+ife b, 4
+  set pc, check_special_strings_true
+
+; False
+ife [c],   0x66 ; f
+ife [c+1], 0x61 ; a
+ife [c+2], 0x6c ; l
+ife [c+3], 0x73 ; s
+ife [c+4], 0x65 ; e
+  set a, false
+ret
+
+:check_special_strings_true
+ife [c],   0x74 ; t
+ife [c+1], 0x72 ; r
+ife [c+2], 0x75 ; u
+ife [c+3], 0x65 ; e
+  set a, true
+ret
+
+:check_special_strings_nil
+ife [c],   0x6e ; n
+ife [c+1], 0x69 ; i
+ife [c+2], 0x6c ; l
+  set a, nil
+ret
+
 

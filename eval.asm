@@ -24,11 +24,32 @@ jsr eval_ast ; Evaluate the parts of the list.
 set b, [a]   ; Function cell in B.
 set a, [a+1] ; Arg list in A.
 
+ife [b], type_closure
+  set pc, EVAL_closure
 ifn [b], type_native
   brk -1 ; Can't support anything else right now.
 
 tc [b+1] ; Tail call into our function.
 
+
+
+; Arg list is in A, function in B.
+:EVAL_closure
+pushX
+set x, [b+1] ; The (env, params, body) list.
+
+; First, construct our function env.
+set c, a   ; List of evaluated args goes in C.
+set a, [x] ; The parent env is the first value from the list.
+set x, [x+1] ; Advance X to the params.
+set b, [x]   ; B holds the parameter list.
+jsr build_env_with ; A holds the final env.
+
+set b, a
+set a, [x+1]
+set a, [a] ; Grab the body.
+popX
+tc EVAL ; Nested EVAL of the body in the new env.
 
 
 ; Checks if the AST is a list or symbol.
@@ -100,6 +121,9 @@ retXY
 :special_forms
 .dat def_symbol, sf_def
 .dat let_symbol, sf_let
+.dat do_symbol, sf_do
+.dat if_symbol, sf_if
+.dat fn_symbol, sf_fn
 :special_forms_end
 
 ; Checks each special form record in turn, until one matches.
@@ -244,4 +268,104 @@ jsr EVAL
 retXY
 
 
+
+; Special form for (do exprs....).
+; Evaluates each contained expression in order, returning the last.
+:sf_do
+pushXY
+set x, [a+1] ; Put our list into X, skipping the initial do.
+set y, b     ; Save our environment.
+
+set a, nil ; Nil is returned for an empty do.
+ife x, empty_list
+  set pc, sf_do_done
+
+; There's at least one value, so proceed.
+:sf_do_loop
+set a, [x] ; The next value.
+set b, y   ; The environment.
+jsr eval_ast
+
+set x, [x+1]
+ifn x, empty_list
+  set pc, sf_do_loop
+; If not, fall through.
+
+:sf_do_done ; Whether we fell through or jumped from above, A is the value.
+set c, 0 ; Do not continue; we're done.
+retXY
+
+
+; Special form for ifs. Evaluates the condition (second element).
+; If it's nil or false, return the fourth value, evaluated.
+; Otherwise, return the third value, evaluated.
+:sf_if ; (AST, env) -> AST, env, continue?
+pushXY
+set x, [a+1] ; Skip over the "if" symbol.
+set y, b     ; Save the env
+
+; Evaluate the condition.
+set a, [x]
+set b, y
+jsr eval_ast ; A is the resulting value.
+
+set x, [x+1] ; X points at the true value.
+
+; If A is nil or false, advance to the false value.
+ife a, nil
+  set x, [x+1]
+ife a, false
+  set x, [x+1]
+
+; Either way, evaluate [x] (unless x is empty_list)
+set a, nil ; Prepare to return nil if the list is too short.
+ife x, empty_list
+  set pc, sf_if_done
+
+set a, [x]
+set b, y
+jsr eval_ast
+; Fall through
+
+:sf_if_done
+set b, y
+set c, 0 ; No continue; we've finished evaluating.
+retXY
+
+
+
+; Special form for defining function closures.
+; These need to capture the parent env, their parameter lists, and their body
+; ASTs.
+; A closure has the form: (type_closure, (env, param-list, body)).
+:sf_fn
+pushXY
+set x, [a+1] ; Points at the parameter list.
+set y, b     ; Our containing envirnonment.
+
+; We start by assembling the last cell: (body '())
+jsr alloc_cell
+set [a+1], empty_list
+set b, [x+1]
+set [a], [b] ; The body AST
+
+set push, a ; Save that cell for a moment.
+
+jsr alloc_cell
+set [a], [x] ; Our parameter list.
+set [a+1], pop
+set push, a
+
+jsr alloc_cell
+set [a], y ; Our parent environment.
+set [a+1], pop ; The previous cell.
+set push, a  ; Save it one last time.
+
+jsr alloc_cell
+set [a], type_closure
+set [a+1], pop ; Our function closure is complete and in A.
+
+set b, nil
+set c, 0 ; No continue
+retXY
 

@@ -2,15 +2,18 @@
 set pc, main ; First instruction.
 
 ; Some high-level definitions.
+.def mem_specials, 3 ; nil, true, false.
 .def mem, 0x4000
 .def pre_mem, mem-1
-.def mem_top, 0xff00
+.def mem_top, 0xff00-(mem_specials * 2)
 
 .macro list_type=ifg %0, pre_mem
 .macro not_list_type=ifl %0, mem
 
 .def empty_list, 0 ; FIXME
-.def nil, 0
+.def nil, 0xfefe
+.def true, 0xfefc
+.def false, 0xfefa
 
 ; Types need to be even, since the low bit is used for garbage collection.
 ; Lists are the default, and don't have a type. Literal values like numbers are
@@ -22,6 +25,8 @@ set pc, main ; First instruction.
 .def type_assoc, 10
 .def type_native, 12
 .def type_closure, 14
+.def type_boolean, 16
+.def type_nil, 18
 
 
 .include "util.asm"

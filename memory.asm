@@ -19,7 +19,12 @@
 
 ; Called at startup to prepare the memory system.
 :init_mem ; () -> void
-ret ; Nothing to do, actually.
+set [false], type_boolean
+set [false+1], 0
+set [true], type_boolean
+set [true+1], 1
+set [nil], type_nil
+set [nil+1], 0
 
 
 .def chunk_size, 64

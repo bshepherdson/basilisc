@@ -12,13 +12,11 @@
 :error_msg     .dat 0          ; Pointer to an error block.
 :error_payload .dat nil        ; Optional Lisp value payload.
 
-;.macro err=:err_%0 .dat err_%0_end - err_%0 - 1, %1 %n :err_%0_end
+.macro mkerror=:err_%0 .dat err_end_%0 - err_%0 - 1 %n .dat %1 %n :err_end_%0 %n
 
-;err not_found_, "' not found"
-
-:err_not_found_ .dat 11
-.dat "' not found"  ; err_not_found__end - err_not_found_ - 1, "' not found"
-:err_not_found__end
+; NB: For obscure reasons, no space can exist after the comma for these to work.
+mkerror not_found_,"' not found"
+mkerror not_enough_arguments,"too few args"
 
 ; Called to set an internal error.
 :abort ; (error_block) ->

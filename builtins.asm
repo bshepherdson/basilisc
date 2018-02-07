@@ -77,9 +77,13 @@ tc as_number
 
 builtin "def!", 4, def
 brk -3 ; Can't happen; it's never called for real.
-
-
 builtin "let*", 4, let
+brk -3 ; Can't happen, it's never called for real.
+builtin "do", 2, do
+brk -3 ; Can't happen, it's never called for real.
+builtin "if", 2, if
+brk -3 ; Can't happen, it's never called for real.
+builtin "fn*", 3, fn
 brk -3 ; Can't happen, it's never called for real.
 
 

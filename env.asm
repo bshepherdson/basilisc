@@ -15,6 +15,56 @@ set [a+1], pop
 ret
 
 
+; Convenience for building an environment with eg. function parameters set.
+; It expects a list of parameter names as binds, and a list of values as exprs.
+:build_env_with ; (parent, binds, exprs) -> env
+pushXY
+set x, b
+set y, c
+jsr build_env
+set push, a ; Keep the environment on the stack.
+
+; There's an interesting special case here: if the value in X is ever a symbol
+; instead of a list containing symbols, then the entire remaining parameter list
+; is bound to it; this is the "rest" parameters.
+:build_env_with_loop
+ife x, empty_list
+  set pc, build_env_with_done
+ife [x], type_symbol
+  set pc, build_env_with_rest
+
+; Otherwise, [x] is a symbol for the next value.
+ifn y, empty_list
+  set pc, build_env_with_loop_legit
+
+; Error! We ran out of values before names.
+set a, err_not_enough_arguments
+tc abort
+
+:build_env_with_loop_legit ; Continue by binding a single pair.
+set a, peek ; The environment.
+set b, [x]  ; The symbol.
+set c, [y]  ; The value.
+jsr env_insert
+
+set x, [x+1]
+set y, [y+1]
+set pc, build_env_with_loop
+
+:build_env_with_rest
+set a, peek
+set b, x  ; The final symbol
+set c, y  ; The entire remaining list (maybe empty)
+jsr env_insert
+; Fall through
+
+:build_env_with_done
+set a, pop ; Our augmented environment.
+retXY
+
+
+
+
 ; Inserts a new value for the given into the top-most environment.
 :env_insert ; (env, symbol, value) ->
 set a, [a]

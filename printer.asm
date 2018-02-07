@@ -19,6 +19,12 @@ ife [a], type_assoc
   set pc, pr_str_assoc
 ife [a], type_native
   set pc, pr_str_native
+ife [a], type_closure
+  set pc, pr_str_native ; Same as a closure for now.
+ife [a], type_boolean
+  set pc, pr_str_boolean
+ife [a], type_nil
+  set pc, pr_str_nil
 
 ; Default case: a list of other values.
 pushX
@@ -224,12 +230,50 @@ sub b, a ; Length acquired.
 ret
 
 
-:pr_str_native
-set a, [cursor]
-set [a], 0x24 ; '$'
-set [a+1], 0x66 ; 'f'
-set [a+2], 0x6e ; 'n'
-add [cursor], 3
-set b, 3
+:print_to_cursor  ; (str+len pointer) ->
+set push, I
+set push, J
+set b, [a]
+add a, 1
+set i, a
+set j, [cursor]
+
+:print_to_cursor_loop
+sti [j], [i]
+sub b, 1
+ifg b, 0
+  set pc, print_to_cursor_loop
+
+set [cursor], j
+set j, pop
+set i, pop
 ret
+
+
+
+:str_false .dat 5
+.dat "false"
+:str_true  .dat 4
+.dat "true"
+:str_nil   .dat 3
+.dat "nil"
+:str_fn_native .dat 3
+.dat "$fn"
+
+:pr_str_native
+set a, str_fn_native
+tc print_to_cursor
+
+:pr_str_boolean
+set c, str_false
+ife a, true
+  set c, str_true
+
+set a, c
+tc print_to_cursor
+
+:pr_str_nil
+set a, str_nil
+tc print_to_cursor
+
 
