@@ -284,7 +284,7 @@ ife x, empty_list
 :sf_do_loop
 set a, [x] ; The next value.
 set b, y   ; The environment.
-jsr eval_ast
+jsr EVAL
 
 set x, [x+1]
 ifn x, empty_list
@@ -307,7 +307,7 @@ set y, b     ; Save the env
 ; Evaluate the condition.
 set a, [x]
 set b, y
-jsr eval_ast ; A is the resulting value.
+jsr EVAL ; A is the resulting value.
 
 set x, [x+1] ; X points at the true value.
 
@@ -324,7 +324,7 @@ ife x, empty_list
 
 set a, [x]
 set b, y
-jsr eval_ast
+jsr EVAL
 ; Fall through
 
 :sf_if_done

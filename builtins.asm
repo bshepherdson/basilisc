@@ -75,6 +75,117 @@ tc as_number
 
 
 
+; Printing and output
+:prn_buffer .reserve 64
+
+builtin "prn", 3, prn
+set push, [cursor]
+set [cursor], prn_buffer
+set b, a
+set a, nil
+ifn b, empty_list
+  set a, [b]
+jsr pr_str_inner
+jsr print_raw_str
+jsr print_newline
+set a, nil
+set [cursor], pop
+ret
+
+
+
+; List functions
+builtin "list", 4, list
+ret ; The parameters are already a list.
+
+builtin "list?", 5, list_q
+set b, [a]
+set a, true
+ifn b, empty_list
+  not_list_type [b]
+    set a, false
+ret
+
+builtin "empty?", 6, empty
+set b, [a]
+set a, false
+ife b, empty_list
+  set a, true
+ret
+
+builtin "count", 5, count
+ife [a], nil
+  set pc, count_nil
+set a, [a]
+jsr list_length
+tc as_number
+
+:count_nil
+set a, 0
+tc as_number
+
+
+
+; Conditionals
+
+; We return true if the two arguments are the same type and have the same value.
+; Lists are compared recursively.
+builtin "=", 1, lisp_equals
+set c, [a]
+set a, [a+1]
+set b, [a]
+set a, c
+tc equals
+
+
+builtin "<", 1, lisp_lt
+jsr binop_numbers
+set c, false
+ifu a, b
+  set c, true
+set a, c
+ret
+
+builtin ">", 1, lisp_gt
+jsr binop_numbers
+set c, false
+ifa a, b
+  set c, true
+set a, c
+ret
+
+builtin "<=", 2, list_le
+jsr binop_numbers
+set c, true
+ifa a, b
+  set c, false
+set a, c
+ret
+
+builtin ">=", 2, list_ge
+jsr binop_numbers
+set c, true
+ifu a, b
+  set c, false
+set a, c
+ret
+
+builtin "not", 3, lisp_not
+set b, [a]
+set a, false
+
+ife b, nil
+  set a, true
+ife b, false
+  set a, true
+ret
+
+
+
+; TODO Unsigned comparisons.
+
+
+; Placeholders for the special forms.
 builtin "def!", 4, def
 brk -3 ; Can't happen; it's never called for real.
 builtin "let*", 4, let

@@ -4,7 +4,7 @@ TESTER=./test_runner.py
 TEST_HARDWARE=serial,clock
 RUN_CMD=dcpu -hw $(TEST_HARDWARE) lisp.bin
 
-TESTS=tests/values.bsl tests/builtins.bsl tests/env.bsl
+TESTS=tests/values.bsl tests/builtins.bsl tests/env.bsl tests/if_fn_do.bsl
 
 
 lisp.bin: *.asm
@@ -17,7 +17,19 @@ default: build
 clean: FORCE
 	rm -f lisp.bin test.mal
 
-test: build FORCE
+test1: tests/values.bsl build FORCE
+	$(TESTER) $< -- $(RUN_CMD)
+
+test2: tests/builtins.bsl build FORCE
+	$(TESTER) $< -- $(RUN_CMD)
+
+test3: tests/env.bsl build FORCE
+	$(TESTER) $< -- $(RUN_CMD)
+
+test4: tests/if_fn_do.bsl build FORCE
+	$(TESTER) $< -- $(RUN_CMD)
+
+test: $(TESTS) build FORCE
 	cat $(TESTS) > test.mal
 	$(TESTER) test.mal -- $(RUN_CMD)
 	rm -rf test.mal
