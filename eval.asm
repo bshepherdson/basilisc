@@ -10,7 +10,13 @@ not_list_type [a]
 ; First, check for special forms.
 jsr special_forms_check ; returns AST, env, continue?
 ife c, 0
-  ret ; Don't continue.
+  ret ; Bail if it's already been handled.
+
+; If we're still here, double-check the type before continuing.
+ife a, empty_list
+  ret
+not_list_type [a]
+  tc eval_ast
 
 jsr eval_ast ; Evaluate the parts of the list.
 
@@ -38,17 +44,21 @@ list_type [a]
 ; For everything else (numbers, strings) they simply get returned.
 ret
 
+:last_symbol .dat 0
+
 :eval_ast_symbol ; Looks up our symbol in the environment.
 set c, b
 set b, a
 set a, c  ; Herp derp gotta swap them round.
+set [last_symbol], b ; Save the symbol into the variable.
 jsr env_lookup
 
 ifn b, 0
   ret ; Found our symbol, so we return its value.
 
 ; Otherwise, we failed to find it, so emit an error.
-brk -1 ; TODO Better error messages everywhere.
+set a, [last_symbol]
+tc not_found
 
 
 ; Calls EVAL on each member of the list, returning a new list.
@@ -186,6 +196,52 @@ retXY
 
 
 
+; Expects (let* (k1 v1 k2 v2 ...) expr).
+; Builds an environment with each of the k_i referring to the evaluated v_i's,
+; then evaluates expr in that environment and discards it.
+; Actually this doesn't evaluate expr directly, rather it returns with expr as
+; the returned AST, and the let* env as the env, which gives better tail-call
+; performance.
 :sf_let ; (AST, env) -> AST, env, continue
-brk -4
+pushXY
+set x, a
+
+set a, b   ; Env is the parent for this new environment.
+jsr build_env ; A is now a new environment.
+set y, a      ; Y holds that new environment now.
+
+set x, [x+1]  ; Discard the first value; that's the "let*" symbol.
+set a, [x]    ; The parameter list.
+set x, [x+1]  ; Push the final expression.
+set push, [x]
+set x, a      ; The parameter list lives in X.
+
+:sf_let_loop
+ife x, empty_list
+  set pc, sf_let_loop_done
+
+; First element is the symbol, second is the value.
+; We want the value first, so we can EVAL it.
+set a, [x+1]
+set a, [a]
+set b, y
+jsr EVAL ; A is now the evaluated value.
+
+set c, a
+set b, [x] ; Our symbol
+set a, y   ; The environment.
+jsr env_insert ; A is the updated environment.
+set x, [x+1]
+set x, [x+1] ; Take the tail twice, leaving x pointing after its past self.
+set pc, sf_let_loop
+
+
+:sf_let_loop_done
+; TODO We want this to be a tail call eventually.
+set b, y
+set a, pop  ; Our trailing expression.
+jsr EVAL
+retXY
+
+
 

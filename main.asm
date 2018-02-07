@@ -35,6 +35,7 @@ set pc, main ; First instruction.
 .include "helpers.asm"
 .include "builtins.asm"
 .include "eval.asm"
+.include "errors.asm"
 
 .include "repl.asm"
 .include "strings.asm"
