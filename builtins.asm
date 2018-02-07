@@ -7,10 +7,14 @@
 ; Setting up the builtin macro.
 ; We're building a linked list of (next, string, length, code) blobs for each
 ; builtin.
+; Each builtin has the following parts:
+; - foo_name - raw string.
+; - foo_record - the (next, string, length, code) blob.
+; - foo_symbol - pointer to the actual symbol, useful for runtime checks.
 ; Call this macro like:
 ; builtin "name", name_length, label
 ; code...
-.macro builtin=:%2_name .dat %0 %n :%2_record .dat last_builtin, %2_name, %1, %2 %n .def last_builtin, %2_record %n :%2
+.macro builtin=:%2_name .dat %0 %n :%2_record .dat last_builtin, %2_name, %1, %2 %n .def last_builtin, %2_record %n :%2_symbol .dat 0 %n :%2
 
 
 
@@ -71,6 +75,13 @@ tc as_number
 
 
 
+builtin "def!", 4, def
+brk -3 ; Can't happen; it's never called for real.
+
+
+builtin "let*", 4, let
+brk -3 ; Can't happen, it's never called for real.
+
 
 :init_repl_env ; () ->
 pushX
@@ -92,7 +103,10 @@ set a, [x+1] ; The string pointer.
 set b, [x+2] ; The length
 jsr str_to_symbol ; Now we have a symbol for it.
 
-set b, a ; Move it to B.
+set b, [x+3] ; Put the code pointer into B.
+set [b-1], a ; Store the symbol into the slot before it, [foo_symbol].
+
+set b, a ; Move the symbol itself to B.
 set a, [repl_env] ; repl_env in A.
 set c, pop ; Grab the code cell as well.
 jsr env_insert ; Loaded into the environment.
