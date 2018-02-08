@@ -250,9 +250,110 @@ ife b, false
   set a, true
 ret
 
-
-
 ; TODO Unsigned comparisons.
+
+
+
+
+; Atoms
+builtin "atom", 4, atom
+; First argument is a value.
+ifn a, empty_list
+  set pc, atom_has_arg
+
+set a, err_not_enough_arguments
+tc abort
+
+:atom_has_arg
+set a, [a] ; A is the first argument.
+set b, type_atom
+tc as_typed_cell
+
+
+builtin "atom?", 5, atom_q
+set c, a
+set a, false
+ife c, empty_list
+  ret
+set c, [c] ; First arg
+ifn [c], type_atom
+  ret
+
+set a, true
+ret
+
+
+builtin "deref", 5, deref
+ifn a, empty_list
+  set pc, deref_has_arg
+
+set a, err_not_enough_arguments
+tc abort
+
+:deref_has_arg
+set c, [a] ; First arg
+set a, [c+1]
+ife [c], type_atom
+  ret
+
+set a, err_expected_atom
+tc abort
+
+
+builtin "reset!", 6, reset_atom
+ife a, empty_list
+  tc not_enough_arguments
+set b, [a]
+set c, [a+1]
+ife c, empty_list
+  tc not_enough_arguments
+set c, [c]
+
+ifn [b], type_atom
+  tc expected_atom
+
+set [b+1], c ; Write our value (C) into the cdr of the atom (B)
+set a, c     ; And return the value.
+ret
+
+
+; (swap! myatom func args...)
+; Calls the function with the atom's current value as the first argument, and
+; the trailing values here as extras.
+builtin "swap!", 5, swap_atom
+ife a, empty_list
+  tc not_enough_arguments
+
+set b, [a] ; The atom
+ifn [b], type_atom
+  tc expected_atom
+
+set c, [a+1]
+ife c, empty_list
+  tc not_enough_arguments
+
+set a, [c] ; The second argument, the function.
+set c, [c+1] ; The tail, with any additional arguments.
+
+; We build a list of all the parameters.
+set push, a
+set push, b
+set push, c
+jsr alloc_cell ; A holds a new cell.
+set [a+1], pop ; Tail args into cdr
+set c, pop ; Our atom
+set [a], [c+1] ; Its current value goes into the car.
+set b, pop ; Our function in B.
+
+; Now to set up the call. The arguments are already evaluated, so we can jump
+; right into eval_call.
+set push, c ; Save the atom for later.
+jsr eval_call ; A is the new atom value as well as our return value.
+
+set c, pop ; The atom.
+set [c+1], a ; Write its new value.
+ret
+
 
 
 ; Placeholders for the special forms.

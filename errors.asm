@@ -12,11 +12,12 @@
 :error_msg     .dat 0          ; Pointer to an error block.
 :error_payload .dat nil        ; Optional Lisp value payload.
 
-.macro mkerror=:err_%0 .dat err_end_%0 - err_%0 - 1 %n .dat %1 %n :err_end_%0 %n
+.macro mkerror=:err_%0 .dat err_end_%0 - err_%0 - 1 %n .dat %1 %n :err_end_%0 %n :%0 %n set a, err_%0 %n tc abort
 
 ; NB: For obscure reasons, no space can exist after the comma for these to work.
 mkerror not_found_,"' not found"
 mkerror not_enough_arguments,"too few args"
+mkerror expected_atom,"expected atom"
 
 ; Called to set an internal error.
 :abort ; (error_block) ->
@@ -33,10 +34,6 @@ set sp, -1 ; Just the topmost value.
 tc run_repl
 
 
-
-
-; Universal error function.
-
 ; Helper function for symbol lookup failure.
 :not_found ; (sym) ->
 set push, a
@@ -49,7 +46,6 @@ jsr print_lisp_str
 
 set a, err_not_found_
 tc abort
-
 
 
 

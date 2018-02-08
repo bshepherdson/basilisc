@@ -15,6 +15,8 @@ ife [a], type_string
   set pc, pr_str_string
 ife [a], type_number
   set pc, pr_str_number
+ife [a], type_atom
+  set pc, pr_str_atom
 ife [a], type_assoc
   set pc, pr_str_assoc
 ife [a], type_native
@@ -101,6 +103,27 @@ ret
 :pr_str_symbol
 set a, [a+1]
 tc lisp_to_str ; buf, len
+
+
+:pr_str_atom
+; Prints (atom ...), forwarding the readability flag.
+set c, [cursor]
+set [c],   0x28 ; (
+set [c+1], 0x61 ; a
+set [c+2], 0x74 ; t
+set [c+3], 0x6f ; o
+set [c+4], 0x6d ; m
+set [c+5], 0x20 ; space
+add [cursor], 6
+
+set a, [a+1] ; Leave B as the flag.
+jsr pr_str_inner
+
+set c, [cursor]
+set [c], 0x29 ; )
+add [cursor], 1
+ret
+
 
 :pr_str_number
 ; We use a to hold the number, b for the negative flag, and C to hold the count

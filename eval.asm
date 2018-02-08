@@ -24,6 +24,7 @@ jsr eval_ast ; Evaluate the parts of the list.
 set b, [a]   ; Function cell in B.
 set a, [a+1] ; Arg list in A.
 
+:eval_call ; (args, func)
 ife [b], type_closure
   set pc, EVAL_closure
 ifn [b], type_native

@@ -1,6 +1,9 @@
 ; Main file. This one includes the others in a sane order.
 set pc, main ; First instruction.
 
+; TODO: Add file handling, and at least read-string and friends.
+; TODO: Add @ reader macro for deref.
+
 ; Some high-level definitions.
 .def mem_specials, 3 ; nil, true, false.
 .def mem, 0x4000
@@ -27,6 +30,7 @@ set pc, main ; First instruction.
 .def type_closure, 14
 .def type_boolean, 16
 .def type_nil, 18
+.def type_atom, 20 ; Atoms hold some value in their cdr, and can be updated.
 
 
 .include "util.asm"
