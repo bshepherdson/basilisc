@@ -49,6 +49,10 @@ set b, a
 set a, [x+1]
 set a, [a] ; Grab the body.
 popX
+
+; TODO Remove this debugging hook eventually, it costs several cycles.
+ifl sp, 0xff00
+  brk -4 ; Catch runaway nesting.
 tc EVAL ; Nested EVAL of the body in the new env.
 
 
@@ -264,7 +268,8 @@ set pc, sf_let_loop
 ; TODO We want this to be a tail call eventually.
 set b, y
 set a, pop  ; Our trailing expression.
-jsr EVAL
+popXY
+tc EVAL
 retXY
 
 
@@ -276,24 +281,29 @@ pushXY
 set x, [a+1] ; Put our list into X, skipping the initial do.
 set y, b     ; Save our environment.
 
-set a, nil ; Nil is returned for an empty do.
 ife x, empty_list
-  set pc, sf_do_done
+  set pc, sf_do_nil
 
 ; There's at least one value, so proceed.
 :sf_do_loop
 set a, [x] ; The next value.
 set b, y   ; The environment.
-jsr EVAL
 
 set x, [x+1]
-ifn x, empty_list
-  set pc, sf_do_loop
+ife x, empty_list
+  set pc, sf_do_last_one
 ; If not, fall through.
 
-:sf_do_done ; Whether we fell through or jumped from above, A is the value.
-set c, 0 ; Do not continue; we're done.
+jsr EVAL
+set pc, sf_do_loop
+
+:sf_do_nil
+set a, nil
 retXY
+
+:sf_do_last_one
+popXY
+tc EVAL
 
 
 ; Special form for ifs. Evaluates the condition (second element).
@@ -318,20 +328,19 @@ ife a, false
   set x, [x+1]
 
 ; Either way, evaluate [x] (unless x is empty_list)
-set a, nil ; Prepare to return nil if the list is too short.
 ife x, empty_list
-  set pc, sf_if_done
+  set pc, sf_if_bail
 
 set a, [x]
 set b, y
-jsr EVAL
-; Fall through
+popXY
+set ex, pop ; Drop the return address too - we're never returning to EVAL,
+            ; which called special_forms_check, which called me.
+tc EVAL
 
-:sf_if_done
-set b, y
-set c, 0 ; No continue; we've finished evaluating.
+:sf_if_bail
+set a, nil ; Prepare to return nil if the list is too short.
 retXY
-
 
 
 ; Special form for defining function closures.

@@ -2,9 +2,10 @@ ASM=dasm
 TESTER=./test_runner.py
 
 TEST_HARDWARE=serial,clock
-RUN_CMD=dcpu -hw $(TEST_HARDWARE) lisp.bin
+RUN_CMD=dcpu -turbo -hw $(TEST_HARDWARE) lisp.bin
 
-TESTS=tests/values.bsl tests/builtins.bsl tests/env.bsl tests/if_fn_do.bsl
+TESTS=tests/values.bsl tests/builtins.bsl tests/env.bsl tests/if_fn_do.bsl \
+      tests/strings.bsl tests/tco.bsl
 
 
 lisp.bin: *.asm
@@ -36,6 +37,9 @@ test4: tests/if_fn_do.bsl tests/strings.bsl build FORCE
 	cat tests/if_fn_do.bsl tests/strings.bsl > test.mal
 	$(TESTER) test.mal -- $(RUN_CMD)
 	rm -rf test.mal
+
+test5: tests/tco.bsl build FORCE
+	$(TESTER) $< -- $(RUN_CMD)
 
 test: $(TESTS) build FORCE
 	cat $(TESTS) > test.mal
