@@ -2,11 +2,11 @@
 
 ; Populates text into the input buffer.
 ; TODO Confirm it's safe to use the same one; the operations don't overlap.
-:pr_str ; (AST) -> buf, len
+:pr_str ; (AST, readable) -> buf, len
 set [cursor], reader_buffer
 
 ; Recursion-safe inner point that doesn't reset cursor.
-:pr_str_inner ; (AST) -> buf, len
+:pr_str_inner ; (AST, readable) -> buf, len
 ife a, empty_list ; Special case for empty list, since it's not a valid cell.
   set pc, pr_str_empty_list
 ife [a], type_symbol
@@ -28,21 +28,23 @@ ife [a], type_nil
 
 ; Default case: a list of other values.
 pushX
-set b, [cursor]
-set push, b ; Save the initial position for later.
+set c, [cursor]
+set push, c ; Save the initial position for later.
 set x, a    ; X holds the list.
 
 ; First, write a ( to the buffer.
-set [b], 0x28 ; (
+set [c], 0x28 ; (
 add [cursor], 1 ; B is ignored from here.
 
 ; Special case: skip to the end for empty lists.
 ife x, empty_list
   set pc, pr_str_list_done
 
+set push, b ; Save the readability flag.
 
 :pr_str_list_loop
 set a, [x] ; Car into A.
+set b, peek
 jsr pr_str_inner ; Recursively output it.
 set x, [x+1] ; Cdr into X.
 
@@ -50,13 +52,14 @@ ife x, empty_list
   set pc, pr_str_list_done
 
 ; There's more, so emit a space and loop.
-set b, [cursor]
-set [b], 0x20 ; space
+set c, [cursor]
+set [c], 0x20 ; space
 add [cursor], 1
 
 set pc, pr_str_list_loop ; And loop
 
 :pr_str_list_done
+set ex, pop ; Drop the readable flag.
 set b, [cursor]
 set [b], 0x29 ; )
 add [cursor], 1
@@ -68,17 +71,27 @@ retX
 
 
 :pr_str_string
-set b, [cursor]
-set [b], 0x22 ; "
-add [cursor], 1
-
-set a, [a+1]
-jsr lisp_to_str ; buf, len
+set push, b
+ife b, 0
+  set pc, pr_str_string_after_quote_1
 
 set c, [cursor]
 set [c], 0x22 ; "
 add [cursor], 1
 
+:pr_str_string_after_quote_1
+set a, [a+1]
+jsr lisp_to_str ; buf, len
+
+set c, pop ; The saved readable flag.
+ife c, 0
+  set pc, pr_str_string_after_quote_2
+
+set c, [cursor]
+set [c], 0x22 ; "
+add [cursor], 1
+
+:pr_str_string_after_quote_2
 sub a, 1
 add b, 2 ; Adjust for the quotes.
 ret

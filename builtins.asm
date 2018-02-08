@@ -76,22 +76,91 @@ tc as_number
 
 
 ; Printing and output
-:prn_buffer .reserve 64
+:prn_buffer .reserve 128
 
-builtin "prn", 3, prn
-set push, [cursor]
+; All four of the printer types have the same structure: call pr_str on the
+; arguments with readable set or clear, separated by some character.
+; I extract that flow into this function.
+
+; Separator can be 0 or a raw character. 0 is not printed.
+:print_helper ; (args, separator, readable) -> buf, len
+ife a, empty_list
+  set pc, print_helper_empty
+
+pushXYZ
+set x, a
+set y, b
+set z, c
+
+set c, [cursor]
+set push, c
 set [cursor], prn_buffer
-set b, a
-set a, nil
-ifn b, empty_list
-  set a, [b]
+
+:print_helper_loop
+set a, [x]
+set b, z
 jsr pr_str_inner
+
+set x, [x+1]
+ife x, empty_list
+  set pc, print_helper_done
+
+; Emit the separator, if any.
+ife y, 0
+  set pc, print_helper_loop
+
+set b, [cursor]
+set [b], y
+add [cursor], 1
+
+set pc, print_helper_loop
+
+
+:print_helper_done
+set a, prn_buffer
+set b, [cursor]
+sub b, a
+set [cursor], pop
+retXYZ
+
+
+:print_helper_empty
+set a, prn_buffer
+set b, 0
+ret
+
+
+builtin "pr-str", 6, lisp_pr_str
+set b, 0x20 ; space
+set c, 1    ; readable
+jsr print_helper ; A is the buffer, B the length.
+; Convert it to a new Lisp string.
+set c, 0 ; No backslashing
+tc str_to_string
+
+
+builtin "str", 3, list_str
+set b, 0 ; no separator
+set c, 0 ; !readable
+jsr print_helper
+set c, 0 ; No backslashing.
+tc str_to_string
+
+:prn_tail
+set b, 0x20 ; space
+jsr print_helper
 jsr print_raw_str
 jsr print_newline
 set a, nil
-set [cursor], pop
 ret
 
+builtin "prn", 3, prn
+set c, 1    ; readable
+tc prn_tail
+
+builtin "println", 7, println
+set c, 0    ; !readable
+tc prn_tail
 
 
 ; List functions
@@ -170,6 +239,7 @@ ifu a, b
 set a, c
 ret
 
+; This was supposed to be written in BSL itself, but this is faster.
 builtin "not", 3, lisp_not
 set b, [a]
 set a, false

@@ -8,6 +8,7 @@ set pc, pop
 
 :PRINT ; (AST) -> buf, len
 set [cursor], reader_buffer
+set b, 1 ; readable
 jsr pr_str
 set a, reader_buffer
 set b, [cursor]
@@ -27,7 +28,6 @@ set pc, pop
 :run_repl ; () ->
 jsr print_prompt
 jsr serial_read_raw ; buf, len
-;jsr str_to_lisp
 jsr rep             ; buf, len
 jsr print_raw_str
 jsr print_newline

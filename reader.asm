@@ -123,12 +123,7 @@ ifn a, 0
 
 set b, pop
 set a, pop
-jsr str_to_lisp ; A is the Lisp string.
-set push, a
-jsr alloc_cell
-set [a], type_symbol
-set [a+1], pop
-ret
+tc str_to_symbol
 
 
 :read_atom_symbol_special
@@ -141,12 +136,7 @@ ret
 :read_atom_string
 add a, 1
 sub b, 2
-jsr str_to_lisp
-set push, a
-jsr alloc_cell
-set [a], type_string
-set [a+1], pop
-ret
+tc str_to_string
 
 
 ; Found a negative sign. If the next character is a digit, process it as a

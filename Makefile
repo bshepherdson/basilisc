@@ -26,8 +26,16 @@ test2: tests/builtins.bsl build FORCE
 test3: tests/env.bsl build FORCE
 	$(TESTER) $< -- $(RUN_CMD)
 
-test4: tests/if_fn_do.bsl build FORCE
+test4a: tests/if_fn_do.bsl build FORCE
 	$(TESTER) $< -- $(RUN_CMD)
+
+test4b: tests/strings.bsl build FORCE
+	$(TESTER) $< -- $(RUN_CMD)
+
+test4: tests/if_fn_do.bsl tests/strings.bsl build FORCE
+	cat tests/if_fn_do.bsl tests/strings.bsl > test.mal
+	$(TESTER) test.mal -- $(RUN_CMD)
+	rm -rf test.mal
 
 test: $(TESTS) build FORCE
 	cat $(TESTS) > test.mal

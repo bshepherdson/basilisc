@@ -31,6 +31,9 @@ retX
 
 
 :print_raw_str ; (buf, len) ->
+ife b, 0
+  ret
+
 pushXY
 set x, a
 set y, b
