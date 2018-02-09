@@ -34,21 +34,3 @@
 ;=>true
 
 
-;; Testing or macro
-(or)
-;=>nil
-(or 1)
-;=>1
-(or 1 2 3 4)
-;=>1
-(or false 2)
-;=>2
-(or false nil 3)
-;=>3
-(or false nil false false nil 4)
-;=>4
-(or false nil 3 false nil 4)
-;=>3
-(or (or false 4))
-;=>4
-

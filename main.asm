@@ -51,15 +51,13 @@ set pc, main ; First instruction.
 .include "strings.asm"
 .include "types.asm"
 
+.include "lib.asm"
+
 :main
 jsr init_mem
 jsr init_repl_env
+jsr init_lib
 jsr serial_init
-; set a, [repl_env]
-; set a, [a] ; Grab the assoc and print it.
-; jsr PRINT
-; jsr print_raw_str
-; jsr print_newline
 jsr run_repl
 
 :hw_serial .dat 0 ; FIXME

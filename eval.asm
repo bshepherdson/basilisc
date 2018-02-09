@@ -439,36 +439,87 @@ retXY
 ; These need to capture the parent env, their parameter lists, and their body
 ; ASTs.
 ; A closure has the form: (type_closure, (env, param-list, body)).
+
+; NB: Parameter lists are not quite lists.
+; They can be just a symbol (for (& rest)), or the tail of the list can be a
+; symbol rather than a list (for (a b & rest))
 :sf_fn
 pushXY
 set x, [a+1] ; Points at the parameter list.
 set y, b     ; Our containing envirnonment.
 
 ; We start by assembling the last cell: (body '())
-jsr alloc_cell
-set [a+1], empty_list
-set b, [x+1]
-set [a], [b] ; The body AST
+set b, empty_list
+set a, [x+1]
+set a, [a] ; The body AST
+jsr cons
 
-set push, a ; Save that cell for a moment.
+set push, a ; Save the list so far.
+set a, [x]  ; Parameter list.
+jsr massage_parameters ; Looks for a & symbol and converts it.
 
-jsr alloc_cell
-set [a], [x] ; Our parameter list.
-set [a+1], pop
-set push, a
+set b, pop  ; The beginnings of the closure we saved above.
+jsr cons
 
-jsr alloc_cell
-set [a], y ; Our parent environment.
-set [a+1], pop ; The previous cell.
-set push, a  ; Save it one last time.
+set b, a
+set a, y ; Our parent environment.
+jsr cons
 
-jsr alloc_cell
-set [a], type_closure
-set [a+1], pop ; Our function closure is complete and in A.
+set b, type_closure
+jsr as_typed_cell
 
 set b, nil
 set c, 0 ; No continue, that's the final value.
 retXY
+
+
+; Special handling for parameter lists.
+; Calls itself recursively; if it finds the symbol "&" then the next symbol is
+; treated as the trailing one.
+:massage_parameters ; (list) -> param_list
+ife a, empty_list
+  ret
+
+set push, a ; Save the original list.
+set b, [a]
+ifn [b], type_symbol
+  brk -1 ; Internal error.
+
+set b, [b+1] ; The symbol list.
+set c, [b] ; The first symbol.
+ife [c+1], 0x26 ; &
+  ife [b+1], empty_list
+    set pc, massage_parameters_found_amp
+
+; It's something else, so recurse.
+set a, [a+1]
+jsr massage_parameters
+
+; Now, if the saved one's cdr matches the return value, return the saved one.
+set b, peek
+ife [b+1], a
+  set pc, massage_parameters_no_change
+
+; They're different! So we cons our saved list's car onto the returned value.
+set b, a
+set a, pop
+set a, [a]
+tc cons
+
+:massage_parameters_no_change
+set a, pop
+ret
+
+:massage_parameters_found_amp
+; We found the ampersand, so the next symbol is the one we want.
+set a, pop
+set a, [a+1]
+ife a, empty_list
+  tc need_rest_param
+
+set a, [a] ; The final symbol
+ret ; We return it whole.
+
 
 
 ; Quote simply returns its unevaluated first argument.

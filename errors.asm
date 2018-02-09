@@ -20,6 +20,7 @@ mkerror not_enough_arguments,"too few args"
 mkerror expected_atom,"expected atom"
 mkerror expected_number,"expected number"
 mkerror nth_exhausted,"nth: out of range"
+mkerror need_rest_param,"param req'd after &"
 
 ; Called to set an internal error.
 :abort ; (error_block) ->

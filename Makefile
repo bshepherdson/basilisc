@@ -6,7 +6,7 @@ RUN_CMD=dcpu -turbo -hw $(TEST_HARDWARE) lisp.bin
 
 TESTS=tests/values.bsl tests/builtins.bsl tests/env.bsl tests/if_fn_do.bsl \
       tests/strings.bsl tests/tco.bsl tests/atoms.bsl tests/quoting.bsl \
-      tests/macros.bsl tests/lists.bsl
+      tests/macros.bsl tests/lists.bsl tests/lib.bsl
 
 
 lisp.bin: *.asm
@@ -54,8 +54,11 @@ test8a: tests/macros.bsl build FORCE
 test8b: tests/lists.bsl build FORCE
 	$(TESTER) $< -- $(RUN_CMD)
 
-test8: tests/macros.bsl tests/lists.bsl build FORCE
-	cat tests/macros.bsl tests/lists.bsl > test.bsl
+test8c: tests/lib.bsl build FORCE
+	$(TESTER) $< -- $(RUN_CMD)
+
+test8: tests/macros.bsl tests/lists.bsl tests/lib.bsl build FORCE
+	cat tests/macros.bsl tests/lists.bsl tests/lib.bsl > test.bsl
 	$(TESTER) $< -- $(RUN_CMD)
 	rm -f test.bsl
 
