@@ -112,6 +112,21 @@ ifl c, 0x3a ; <= 9
 ife c, 0x2d ; - (negative sign)
   set pc, read_atom_negative
 
+ife c, 0x27 ; ' (quotation)
+  set pc, read_quote
+
+ife c, 0x60 ; ` (quasiquote)
+  set pc, read_quasiquote
+
+ife c, 0x7e ; ~ (unquote)
+  ife b, 1 ; Length 1, so it's just the tilde.
+    set pc, read_unquote
+
+ife c, 0x7e ; ~ (splice-unquote)
+  ife b, 2 ; Length 2, ~@
+    ife [a+1], 0x40 ; @
+      set pc, read_splice_unquote
+
 ; Read a symbol. That's simply converting to a Lisp string, then tucking it into
 ; a symbol type cell.
 :read_atom_symbol
@@ -130,6 +145,35 @@ tc str_to_symbol
 add sp, 2 ; Drop the saved raw string.
 ret
 
+
+:read_quote
+set a, [quote_symbol]
+tc read_wrapped
+
+:read_quasiquote
+set a, [quasiquote_symbol]
+tc read_wrapped
+
+:read_unquote
+set a, [unquote_symbol]
+tc read_wrapped
+
+:read_splice_unquote
+set a, [splice_unquote_symbol]
+tc read_wrapped
+
+
+; Reads the next form and wraps it with the symbol in A:
+; (symbol_from_A next_form)
+:read_wrapped
+set push, a
+jsr next_token ; Skip over the '
+jsr read_form  ; Read the next form.
+set b, empty_list
+jsr cons
+set b, a
+set a, pop ; The saved symbol.
+tc cons
 
 
 ; Similarly to a symbol, we read the string without its quotes.
@@ -244,6 +288,10 @@ ife [x], 0x7e ; ~
 ife [x], 0x28 ; (
   set pc, tokenize_single
 ife [x], 0x29 ; )
+  set pc, tokenize_single
+ife [x], 0x27 ; '
+  set pc, tokenize_single
+ife [x], 0x60 ; `
   set pc, tokenize_single
 
 ife [x], 0x22 ; "

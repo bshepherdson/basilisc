@@ -105,3 +105,44 @@ b
 ;=>false
 
 
+;; Testing ' (quote) reader macro
+'7
+;=>7
+'(1 2 3)
+;=>(1 2 3)
+'(1 2 (3 4))
+;=>(1 2 (3 4))
+
+;; Testing ` (quasiquote) reader macro
+`7
+;=>7
+`(1 2 3)
+;=>(1 2 3)
+`(1 2 (3 4))
+;=>(1 2 (3 4))
+`(nil)
+;=>(nil)
+
+;; Testing ~ (unquote) reader macro
+`~7
+;=>7
+(def! a 8)
+;=>8
+`(1 ~a 3)
+;=>(1 8 3)
+(def! b '(1 "b" "d"))
+;=>(1 "b" "d")
+`(1 b 3)
+;=>(1 b 3)
+`(1 ~b 3)
+;=>(1 (1 "b" "d") 3)
+
+;; Testing ~@ (splice-unquote) reader macro
+(def! c '(1 "b" "d"))
+;=>(1 "b" "d")
+`(1 c 3)
+;=>(1 c 3)
+`(1 ~@c 3)
+;=>(1 1 "b" "d" 3)
+
+
