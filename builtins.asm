@@ -245,6 +245,52 @@ retXYZ
 
 
 
+builtin "nth", 3, nth
+set b, [a] ; The list
+set c, [a+1]
+set c, [c] ; The number.
+
+ifn [c], type_number
+  tc expected_number
+set c, [c+1] ; The raw number.
+
+:nth_loop
+ife c, 0
+  set pc, nth_done
+sub c, 1
+set b, [b+1]
+ife b, empty_list
+  tc nth_exhausted
+set pc, nth_loop
+
+:nth_done
+set a, [b] ; The value at this position.
+ret
+
+
+builtin "first", 5, first
+set a, [a]
+ife a, empty_list
+  tc ret_nil
+set a, [a]
+ret
+
+builtin "rest", 4, rest
+set a, [a]
+ife a, empty_list
+  tc ret_empty_list
+set a, [a+1]
+ret
+
+:ret_nil
+set a, nil
+ret
+
+:ret_empty_list
+set a, empty_list
+ret
+
+
 
 ; Conditionals
 
@@ -410,6 +456,8 @@ ret
 ; Placeholders for the special forms.
 builtin "def!", 4, def
 brk -3 ; Can't happen; it's never called for real.
+builtin "defmacro!", 9, defmacro
+brk -3 ; Can't happen; it's never called for real.
 builtin "let*", 4, let
 brk -3 ; Can't happen, it's never called for real.
 builtin "do", 2, do
@@ -425,6 +473,8 @@ brk -3 ; Can't happen, it's never called for real.
 builtin "unquote", 7, unquote
 brk -3 ; Can't happen, it's never called for real.
 builtin "splice-unquote", 14, splice_unquote
+brk -3 ; Can't happen, it's never called for real.
+builtin "macroexpand", 11, lisp_macroexpand
 brk -3 ; Can't happen, it's never called for real.
 
 

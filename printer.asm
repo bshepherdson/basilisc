@@ -23,6 +23,8 @@ ife [a], type_native
   set pc, pr_str_native
 ife [a], type_closure
   set pc, pr_str_native ; Same as a closure for now.
+ife [a], type_macro
+  set pc, pr_str_native ; Same as a closure for now.
 ife [a], type_boolean
   set pc, pr_str_boolean
 ife [a], type_nil

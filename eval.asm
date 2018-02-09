@@ -7,7 +7,18 @@ not_list_type [a]
   tc eval_ast      ; If not a list, call eval_ast on it.
 
 ; It's a list, so this is the tricky bit.
-; First, check for special forms.
+; First, perform any macro expansion.
+set push, b ; Save the environment (hur hur)
+jsr macroexpand
+set b, pop
+
+; Double-check that it's still a nonempty list.
+ife a, empty_list
+  ret
+not_list_type [a]
+  tc eval_ast
+
+; It's still a list, so we continue by checking for special forms.
 jsr special_forms_check ; returns AST, env, continue?
 ife c, 0
   ret ; Bail if it's already been handled.
@@ -119,18 +130,88 @@ retXY
 
 
 
+; Returns raw true/false depending on whether the AST is a list calling a macro.
+:is_macro_call ; (AST, env) -> macro?
+set c, a
+set a, 0 ; False is common.
+ife c, empty_list
+  ret
+
+not_list_type [c]
+  ret ; Not a list.
+
+; It's a list, at least, so check what the first value is.
+set a, b ; Move the env to A.
+set b, [c]
+ifn [b], type_symbol
+  set pc, is_macro_call_fail
+
+; Look up our symbol in the environment.
+jsr env_lookup ; A is the found value.
+ife b, 0
+  set pc, is_macro_call_fail
+
+; Check if the value is a macro.
+set b, 0
+ife [a], type_macro
+  set b, 1
+set a, b
+ret
+
+; Not a symbol, so bail.
+:is_macro_call_fail
+set a, 0
+ret
+
+
+; Recursively expands macros until what remains is a vanilla call.
+:macroexpand ; (AST, env) -> AST
+pushXY
+set x, a
+set y, b
+
+:macroexpand_loop
+set a, x
+set b, y
+jsr is_macro_call
+ife a, 0
+  set pc, macroexpand_bail
+
+; If we're still here, this is a macro function call.
+; So we look up the macro and call it.
+set b, [x] ; Initial symbol.
+set a, y   ; Our environment.
+jsr env_lookup
+
+; Now we call through to EVAL_closure
+set b, a ; The function itself.
+set a, [x+1] ; The arg list.
+jsr EVAL_closure ; A is the result of the call, on which we loop.
+
+set x, a
+set pc, macroexpand_loop
+
+:macroexpand_bail
+set a, x ; The latest iteration of the AST.
+retXY
+
+
+
+
 ; Table of special forms. Each record is (symbol, code).
 ; The code has type (AST, env) -> AST, env, continue?
 ; If the continue flag is set, EVAL keeps expanding this form, tail-calling.
 ; If it is clear, then we're done and AST should be returned.
 :special_forms
 .dat def_symbol, sf_def
+.dat defmacro_symbol, sf_defmacro
 .dat let_symbol, sf_let
 .dat do_symbol, sf_do
 .dat if_symbol, sf_if
 .dat fn_symbol, sf_fn
 .dat quote_symbol, sf_quote
 .dat quasiquote_symbol, sf_quasiquote
+.dat lisp_macroexpand_symbol, sf_macroexpand
 :special_forms_end
 
 ; Checks each special form record in turn, until one matches.
@@ -181,13 +262,9 @@ tc c
 
 
 
-
-; Special form for def!
-; Defines a new symbol in the environment.
-; Expects the first parameter to be a symbol and the second to be the value.
-; The second parameter gets evaluated and returned, in addition to being added
-; to the environment.
-:sf_def ; (AST, env) -> AST, env, continue?
+; Helper function for def! and defmacro! that does the basic building of the
+; closure triple
+:def_helper ; (AST, env) -> AST
 pushXY
 set x, [a+1] ; We can drop the "def!" symbol.
 set y, b
@@ -221,10 +298,20 @@ jsr env_insert
 
 ; Now return the value, and signal we're done evaluating.
 set a, pop
-set b, 0
-set c, 0 ; No continue
 retXY
 
+
+
+; Special form for def!
+; Defines a new symbol in the environment.
+; Expects the first parameter to be a symbol and the second to be the value.
+; The second parameter gets evaluated and returned, in addition to being added
+; to the environment.
+:sf_def ; (AST, env) -> AST, env, continue?
+jsr def_helper
+set b, 0
+set c, 0 ; No continue, it's handled.
+ret
 
 
 ; Expects (let* (k1 v1 k2 v2 ...) expr).
@@ -499,3 +586,23 @@ jsr cons
 set b, a
 set a, [quote_symbol]
 tc cons
+
+
+:sf_defmacro ; (AST, env) -> AST, env, continue?
+jsr def_helper
+; We expect A to be a fn* triple with type_closure, which we adjust.
+ifn [a], type_closure
+  brk -1
+set [a], type_macro
+set b, 0
+set c, 0 ; No continue
+ret
+
+
+:sf_macroexpand ; (AST, env) -> AST, env, continue?
+set a, [a+1] ; Drop the symbol.
+set a, [a]   ; Take instead the first argument.
+jsr macroexpand ; Run the expansion into an AST.
+set c, 0 ; No continue, just return.
+ret
+

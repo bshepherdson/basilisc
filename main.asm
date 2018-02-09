@@ -28,6 +28,7 @@ set pc, main ; First instruction.
 .def type_assoc, 10
 .def type_native, 12
 .def type_closure, 14
+.def type_macro, 14|32
 .def type_boolean, 16
 .def type_nil, 18
 .def type_atom, 20 ; Atoms hold some value in their cdr, and can be updated.
