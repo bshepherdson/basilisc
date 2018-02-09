@@ -194,6 +194,57 @@ set a, 0
 tc as_number
 
 
+builtin "cons", 4, lisp_cons
+ife a, empty_list
+  tc not_enough_arguments
+set c, [a]
+set a, [a+1]
+ife a, empty_list
+  tc not_enough_arguments
+set b, [a]
+set a, c
+tc cons
+
+builtin "concat", 6, concat
+ife a, empty_list
+  ret
+
+pushXYZ
+set x, a
+
+jsr alloc_cell
+set push, a  ; Save this dummy value for later.
+set y, a
+set [a+1], empty_list ; If the input is empty, this is what we return.
+
+:concat_outer
+set z, [x]
+
+:concat_inner
+ife z, empty_list
+  set pc, concat_outer_next
+jsr alloc_cell
+set [a], [z] ; Copy the car across
+set [y+1], a ; Make this the tail of the current running list.
+set y, a
+
+set z, [z+1] ; Advance to the next part of the inner list.
+set pc, concat_inner
+
+:concat_outer_next ; Found the end of the inner list.
+set [y+1], empty_list ; End the running list properly, just in case.
+set x, [x+1] ; Advance to the next outer list.
+ifn x, empty_list
+  set pc, concat_outer
+
+; If we're here, we're all done. The trailing empty-list has already been set,
+; so we just return.
+set a, pop ; The dummy value we pushed ages ago.
+set a, [a+1] ; The car is empty and its cdr is what we wanted.
+retXYZ
+
+
+
 
 ; Conditionals
 
@@ -366,6 +417,14 @@ brk -3 ; Can't happen, it's never called for real.
 builtin "if", 2, if
 brk -3 ; Can't happen, it's never called for real.
 builtin "fn*", 3, fn
+brk -3 ; Can't happen, it's never called for real.
+builtin "quote", 5, quote
+brk -3 ; Can't happen, it's never called for real.
+builtin "quasiquote", 10, quasiquote
+brk -3 ; Can't happen, it's never called for real.
+builtin "unquote", 7, unquote
+brk -3 ; Can't happen, it's never called for real.
+builtin "splice-unquote", 14, splice_unquote
 brk -3 ; Can't happen, it's never called for real.
 
 

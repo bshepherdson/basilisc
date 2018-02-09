@@ -129,6 +129,8 @@ retXY
 .dat do_symbol, sf_do
 .dat if_symbol, sf_if
 .dat fn_symbol, sf_fn
+.dat quote_symbol, sf_quote
+.dat quasiquote_symbol, sf_quasiquote
 :special_forms_end
 
 ; Checks each special form record in turn, until one matches.
@@ -300,10 +302,12 @@ set pc, sf_do_loop
 
 :sf_do_nil
 set a, nil
+set c, 0 ; No continue, just return nil.
 retXY
 
 :sf_do_last_one
 popXY
+set ex, pop ; Drop the return value; we're never coming back to it.
 tc EVAL
 
 
@@ -376,6 +380,122 @@ set [a], type_closure
 set [a+1], pop ; Our function closure is complete and in A.
 
 set b, nil
-set c, 0 ; No continue
+set c, 0 ; No continue, that's the final value.
 retXY
 
+
+; Quote simply returns its unevaluated first argument.
+:sf_quote ; (AST, env) -> AST, env, continue?
+set a, [a+1]
+set a, [a]
+set c, 0 ; All done.
+ret
+
+
+:sf_quasiquote ; (AST, env) -> AST, env, continue?
+set a, [a+1] ; Drop the "quasiquote" symbol itself.
+set a, [a]
+set push, b
+jsr qq
+set b, pop
+set ex, pop ; Drop the old return address; I'm never returning normally.
+tc EVAL
+
+
+
+:qq ; (AST) -> AST
+ife a, empty_list
+  ret
+not_list_type [a]
+  set pc, qq_just_quote ; Simple, non-list values are simply quoted.
+
+; If it is a list, we check whether the car is the symbol "unquote".
+set push, a
+set a, [a]
+ifn [a], type_symbol
+  set pc, qq_main
+
+set b, [unquote_symbol]
+jsr symbol_eq
+ife a, 0
+  set pc, qq_main
+
+
+:qq_unquote ; Found an unquote; return its first value for evaluation.
+set a, pop ; The list in question.
+set a, [a+1]
+set a, [a] ; Grab the first argument.
+ret ; And return it.
+
+
+:qq_main
+; Next, check for splice-unquote nested inside an inner block.
+set a, pop ; Grab my list.
+set b, [a] ; B is the first element.
+not_list_type [b]
+  set pc, qq_base
+
+set c, [b] ; C is the first element of that element.
+ifn [c], type_symbol
+  set pc, qq_base
+
+set push, a ; Save the main list for later again.
+set b, c
+set a, [splice_unquote_symbol]
+jsr symbol_eq
+
+ifn a, 0
+  set pc, qq_splice_unquote
+
+set a, pop
+
+:qq_base ; The base case (iv): return a list (cons (qq ast[0]) (qq ast[1..]))
+set push, a ; Save our list.
+set a, [a] ; First element in A.
+jsr qq     ; Recurse into it.
+set b, pop
+set push, a ; Save the first element for later.
+set a, [b+1] ; Grab the tail too
+jsr qq      ; Recurse onto it too.
+
+set b, empty_list
+jsr cons ; A is now (tail, ())
+
+set b, a
+set a, pop ; The saved first part
+jsr cons
+
+set b, a
+set a, [lisp_cons_symbol]
+tc cons   ; Our complete cons call is our return value.
+
+
+; case (iii) from the guide.
+; Return a new list (concat ast[0][1] (quasiquote ast[1..]))
+:qq_splice_unquote
+set a, peek ; Grab the main list.
+set a, [a+1] ; Now it's ast[1..]
+jsr qq       ; I've got the last argument now.
+
+set b, empty_list
+jsr cons     ; Last element of the list now.
+set b, a
+
+set a, pop   ; The master list.
+set a, [a]   ; ast[0]
+set a, [a+1] ; ast [0][1..]
+set a, [a]   ; ast[0][1]
+jsr cons     ; Got the latter two elements now.
+
+set b, a
+set a, [concat_symbol]
+tc cons ; Returns our final list.
+
+
+; Simple case (i): just return (quote ast)
+:qq_just_quote
+set b, empty_list
+jsr cons
+set b, a
+set a, [quote_symbol]
+tc cons

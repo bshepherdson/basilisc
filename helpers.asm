@@ -78,6 +78,14 @@ ifn b, empty_list
 ret
 
 
+:cons ; (elem, list) -> list
+set push, a
+set push, b
+jsr alloc_cell
+set [a+1], pop
+set [a], pop
+ret
+
 
 :equals ; (a, b) -> lisp_boolean
 ; We switch on the type of the first argument.
