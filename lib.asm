@@ -1,6 +1,8 @@
 ; Library functionality written in the language itself.
 
 :library
+.dat lib_gensym_counter
+.dat lib_gensym
 .dat lib_or
 .dat lib_cond
 :library_end
@@ -29,6 +31,20 @@ retX
 ; You need to add libraries to the :library list above, as well.
 .macro lib=:lib_%0 .dat lib_end_%0 - lib_%0 - 1 %n .dat %1 %n :lib_end_%0
 
+lib gensym_counter,"(def! -gensym-counter- (atom 0))"
+
+; Expanding by hand since I can't escape quotes in the assembler.
+:lib_gensym .dat lib_end_gensym - lib_gensym - 1
+.dat "(def! gensym (fn* () (symbol (str "
+.dat 0x22
+.dat "G__"
+.dat 0x22
+.dat " (swap! -gensym-counter- (fn* (x) (+ 1 x)))))))"
+:lib_end_gensym
+
+
+; TODO This should work with gensym, but I can't figure out why it's busted.
+;lib or,"(defmacro! or (fn* (& xs) (if (empty? xs) nil (if (= 1 (count xs)) (first xs) (let* (condvar (gensym)) `(let* (or_FIXME ~(first xs)) (if or_FIXME or_FIXME (or ~@(rest xs)))))))))"
 lib or,"(defmacro! or (fn* (& xs) (if (empty? xs) nil (if (= 1 (count xs)) (first xs) `(let* (or_FIXME ~(first xs)) (if or_FIXME or_FIXME (or ~@(rest xs))))))))"
 
 ; Expanding by hand since I can't escape quotes in the assembler.
@@ -40,3 +56,4 @@ lib or,"(defmacro! or (fn* (& xs) (if (empty? xs) nil (if (= 1 (count xs)) (firs
 .dat ")) (cons 'cond (rest (rest xs)))))))"
 :lib_end_cond
 
+;(let* (condvar (gensym)) `(let* (~condvar 7) (if ~condvar ~condvar 8)))

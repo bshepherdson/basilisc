@@ -291,6 +291,89 @@ set a, empty_list
 ret
 
 
+; Runs a function over every element of its second argument (a list),
+; returning a new list.
+builtin "map", 3, map
+pushXYZ
+set x, [a] ; X is the function
+set y, [a+1]
+set y, [y] ; Y is the list.
+
+ife y, empty_list
+  set pc, map_empty
+
+set a, 0
+set b, 0
+jsr cons
+set z, a ; Our running list to slot into.
+set push, a ; Saved as the starting point.
+
+:map_loop
+set b, x ; The function
+set push, [y+1] ; Save the tail
+set [y+1], empty_list ; Fake a single-element list for the call.
+set a, y   ; Our fake list.
+jsr eval_call ; Our result is in A.
+
+set b, empty_list
+jsr cons ; Now it's in a new cell for returning.
+set [z+1], a ; Chain it into the result.
+set z, a
+
+set y, pop ; Advance to the original tail.
+ifn y, empty_list
+  set pc, map_loop
+
+; We've run out of list and have our result list.
+set a, pop ; We saved a dummy cell.
+set a, [a+1] ; The first actual result cell.
+:map_ret
+retXYZ
+
+:map_empty
+set a, empty_list
+set pc, map_ret
+
+
+
+; At least two arguments: the first is a function, the last is a list.
+; (apply f a b (c d)) is equivalent to (f a b c d).
+; I pull out the function, iterate down to the end of the list, mangle it so
+; that it's a single list, and call f with those arguments.
+builtin "apply", 5, apply
+; We use A to hold the previous, B the current. If B.next is the empty list,
+; B is the list we want to chain in.
+; Special case if there's only the function and list.
+set push, a ; Save the starting args.
+
+set b, [a+1]
+
+:apply_loop
+ife [b+1], empty_list
+  set pc, apply_done ; B is our list.
+set a, b
+set b, [a+1]
+set pc, apply_loop
+
+:apply_done
+ife a, peek ; Special case: no extra args at all.
+  set pc, apply_just_list
+
+; Normal case: merge the trailing list onto the argument list.
+set [a+1], [b]
+set a, pop
+set b, [a]    ; B is the function.
+set a, [a+1]  ; And A the function.
+tc eval_call
+
+
+:apply_just_list ; Special case of just a single list.
+set a, [b]   ; Arg list is just the trailing list.
+set b, pop
+set b, [b]   ; B is the function.
+tc eval_call
+
+
 
 ; Conditionals
 
@@ -348,6 +431,46 @@ ife b, false
 ret
 
 ; TODO Unsigned comparisons.
+
+
+
+builtin "symbol", 6, make_symbol
+; First arg holds a string, we just make a new header for it.
+set a, [a]
+set a, [a+1] ; Just the list portion.
+set b, type_symbol
+tc as_typed_cell
+
+
+builtin "nil?", 4, nil_q
+set b, [a]
+set a, false
+ife b, nil
+  set a, true
+ret
+
+builtin "true?", 5, true_q
+set a, [a]
+ife a, true
+  ret
+set a, false
+ret
+
+builtin "false?", 6, false_q
+set b, [a]
+set a, false
+ife b, false
+  set a, true
+ret
+
+builtin "symbol?", 7, symbol_q
+set b, [a]
+set a, false
+ife [b], type_symbol
+  set a, true
+ret
+
+
 
 
 
@@ -453,6 +576,28 @@ ret
 
 
 
+builtin "throw", 5, throw
+; Uses its first argument as the Lisp value, and calls into a try* handler, if
+; any exists.
+set a, [a] ; First argument is the value to throw.
+set [error_payload], a
+set [error], error_lisp
+
+ife [error_handler], 0
+  set pc, throw_top_level
+
+; There's a handler, so jump into it.
+set sp, [error_handler]
+tc try_handle_error
+
+
+:throw_top_level
+; There's no handler, so print the Lisp error to the terminal and die.
+set sp, -1
+set push, run_repl ; Set up to "return" to the top level.
+tc PRINT
+
+
 ; Placeholders for the special forms.
 builtin "def!", 4, def
 brk -3 ; Can't happen; it's never called for real.
@@ -475,6 +620,10 @@ brk -3 ; Can't happen, it's never called for real.
 builtin "splice-unquote", 14, splice_unquote
 brk -3 ; Can't happen, it's never called for real.
 builtin "macroexpand", 11, lisp_macroexpand
+brk -3 ; Can't happen, it's never called for real.
+builtin "try*", 4, try
+brk -3 ; Can't happen, it's never called for real.
+builtin "catch*", 6, catch
 brk -3 ; Can't happen, it's never called for real.
 
 

@@ -212,6 +212,7 @@ retXY
 .dat quote_symbol, sf_quote
 .dat quasiquote_symbol, sf_quasiquote
 .dat lisp_macroexpand_symbol, sf_macroexpand
+.dat try_symbol, sf_try
 :special_forms_end
 
 ; Checks each special form record in turn, until one matches.
@@ -355,12 +356,11 @@ set pc, sf_let_loop
 
 
 :sf_let_loop_done
-; TODO We want this to be a tail call eventually.
 set b, y
 set a, pop  ; Our trailing expression.
 popXY
+set ex, pop ; Drop our return address.
 tc EVAL
-retXY
 
 
 
@@ -656,4 +656,68 @@ set a, [a]   ; Take instead the first argument.
 jsr macroexpand ; Run the expansion into an AST.
 set c, 0 ; No continue, just return.
 ret
+
+
+; Tries to evaluate the first value after setting itself up as the error
+; handler.
+; If it returns safely, great. If not, try_handle_error gets called and we
+; move into the call handler.
+; Our AST here is (try* A (catch* B C))
+; If A errors out, we bind the error payload to B and tail-call C.
+:sf_try ; (AST, env) -> AST, env, continue?
+set a, [a+1] ; Skip over the try* symbol itself.
+
+set push, a
+set push, b
+set push, [error_handler]
+set [error_handler], sp
+
+set a, [a]    ; That's the main code, the one that might fail.
+jsr EVAL
+
+; If that returned to here, then everything is good.
+set [error_handler], pop
+add sp, 2 ; Dump my saved values.
+set c, 0 ; No continue.
+ret
+
+
+; If an error fired, we land here. The stack should already have been adjusted
+; to where it was saved above.
+:try_handle_error
+set [error_handler], pop ; Restore the old, saved value; allows nested try.
+set b, pop  ; Env
+set a, pop  ; Original AST.
+
+pushXY
+set x, a
+set y, b
+
+set x, [x+1] ; Points to second arg, the (catch* b c) list.
+set x, [x]   ; Reaches in, now points at catch*.
+set a, [x]
+set b, [catch_symbol]
+jsr symbol_eq
+ife a, 0
+  tc bad_try_catch
+
+; Successful match, so move along.
+set a, y
+jsr build_env
+set y, a
+
+set x, [x+1] ; Points at the symbol's element.
+set b, [x]   ; The symbol itself.
+set c, [error_payload]
+jsr env_insert
+
+; Our new environment is ready, now it's time to tail-call EVAL.
+set a, [x+1]
+set a, [a]   ; The AST for the catch body.
+set b, y     ; Our new environment.
+
+popXY
+set [error_payload], nil ; Empty that out; it's a GC root.
+add sp, 1 ; Drop my own return address; sf_try doesn't return in this case.
+tc EVAL
 

@@ -59,8 +59,20 @@ test8c: tests/lib.bsl build FORCE
 
 test8: tests/macros.bsl tests/lists.bsl tests/lib.bsl build FORCE
 	cat tests/macros.bsl tests/lists.bsl tests/lib.bsl > test.bsl
-	$(TESTER) $< -- $(RUN_CMD)
+	$(TESTER) test.bsl -- $(RUN_CMD)
 	rm -f test.bsl
+
+test9a: tests/try-catch.bsl build FORCE
+	$(TESTER) $< -- $(RUN_CMD)
+
+test9b: tests/lib2.bsl build FORCE
+	$(TESTER) $< -- $(RUN_CMD)
+
+test9: tests/try-catch.bsl tests/lib2.bsl build FORCE
+	cat tests/try-catch.bsl tests/lib2.bsl > test.bsl
+	$(TESTER) test.bsl -- $(RUN_CMD)
+	rm -f test.bsl
+
 
 test: $(TESTS) build FORCE
 	cat $(TESTS) > test.bsl

@@ -185,3 +185,25 @@ set a, c
 ret
 
 
+
+
+; Basic copying function.
+:move ; (src, dst, len)
+set push, i
+set push, j
+set i, a
+set j, b
+
+:move_loop
+ife c, 0
+  set pc, move_done
+
+sti [j], [i]
+sub c, 1
+set pc, move_loop
+
+:move_done
+set j, pop
+set i, pop
+ret
+
